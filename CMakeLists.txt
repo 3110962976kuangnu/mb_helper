@@ -27,21 +27,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Qt5 COMPONENTS SerialPort REQUIRED)
 
-if(ANDROID)
-  add_library(modbus_helper SHARED
-    main.cpp
-    mainwindow.cpp
-    mainwindow.h
-    mainwindow.ui
-  )
-else()
-  add_executable(modbus_helper
-    main.cpp
-    mainwindow.cpp
-    mainwindow.h
-    mainwindow.ui
-  )
-endif()
+
+add_executable(modbus_helper
+  main.cpp
+  mainwindow.cpp
+  mainwindow.h
+  mainwindow.ui
+)
+
 
 target_link_libraries(modbus_helper PRIVATE Qt5::Widgets)
 target_link_libraries(modbus_helper PRIVATE Qt5::SerialPort)

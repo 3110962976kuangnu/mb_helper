@@ -88,7 +88,7 @@
         </widget>
        </item>
        <item row="3" column="5">
-        <widget class="QPushButton" name="btn_test2">
+        <widget class="QPushButton" name="btn_scan_port">
          <property name="text">
           <string>扫描串口</string>
          </property>
