@@ -65,7 +65,6 @@ public:
     pb_auto_send = new QPushButton("Auto Send", this);
     pb_read = new QPushButton("Read", this);
     table_data = new QTableWidget(this);
-    table_data->
     table_data->setRowCount(2);
     table_data->setColumnCount(1);
     le_reg_edit->setMaximumWidth(50);
