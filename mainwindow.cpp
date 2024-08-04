@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 #include <qglobal.h>
+#include <qlistwidget.h>
 #include <qmessagebox.h>
 #include <qpushbutton.h>
 
@@ -27,6 +28,8 @@ MainWindow::MainWindow(QWidget *parent)
   connect(timer, &QTimer::timeout, this, &MainWindow::parse_serial_data);
   connect(ui->btn_add_03, &QPushButton::clicked, this,
           &MainWindow::create_fun_code_03_widget);
+  connect(ui->lw_widget_list, &QListWidget::itemPressed, this,
+          &MainWindow::onListWidgetMousePressEvent, Qt::QueuedConnection);
 }
 
 MainWindow::~MainWindow() { delete ui; }
@@ -87,15 +90,28 @@ void MainWindow::parse_serial_data() {
   ui->te_receive->append(str);
   rx_buffer.clear();
 }
+
+void MainWindow::onListWidgetMousePressEvent(QListWidgetItem *item) {
+  qDebug() << "onListWidgetMousePressEvent";
+
+  if (!item) {
+    qDebug() << "item is false  ";
+    return;
+  }
+  delete ui->lw_widget_list->takeItem(ui->lw_widget_list->row(item));
+}
+
 void MainWindow::create_fun_code_03_widget() {
   try {
     qDebug() << "create_fun_code_03_widget";
     FunCodeWidget_03 *fun_code_widget = new FunCodeWidget_03(this);
-    // fun_code_widget->setMinimumHeight(300);
     fun_code_widgets.append(fun_code_widget);
     QListWidgetItem *item = new QListWidgetItem(ui->lw_widget_list);
-    item->setSizeHint(fun_code_widget->sizeHint());
+    item->setSizeHint(QSize(ui->lw_widget_list->width(), 110));
     ui->lw_widget_list->setItemWidget(item, fun_code_widget);
+    ui->lw_widget_list->setStyleSheet(
+        "QListWidget::item:hover { background-color: transparent; }"
+        "QListWidget::item:selected { border: 2px solid #007bff; }");
   } catch (...) {
     // 捕获所有类型的异常
     QMessageBox::warning(this, "Warning", "Create widget failed!");

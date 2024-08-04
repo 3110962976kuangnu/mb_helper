@@ -2,13 +2,14 @@
 #define MAINWINDOW_H
 
 #include <QDebug>
+#include <QListWidgetItem>
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QSerialPort>
 #include <QSerialPortInfo>
 #include <QThread>
 #include <QTimer>
-#include <qlist.h>
+
 
 #include "funcode_widget.h"
 
@@ -35,6 +36,8 @@ public slots:
   void create_fun_code_03_widget();
   void create_fun_code_06_widget();
   void create_fun_code_16_widget();
+
+  void onListWidgetMousePressEvent(QListWidgetItem *item);
 
 private:
   Ui::MainWindow *ui;
