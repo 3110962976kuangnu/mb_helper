@@ -4,6 +4,8 @@
 #include <qlistwidget.h>
 #include <qmessagebox.h>
 #include <qpushbutton.h>
+#include <qvariant.h>
+#include <qwidget.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -86,8 +88,17 @@ void MainWindow::send_test_data() {
   serialPort->write(data);
 }
 void MainWindow::parse_serial_data() {
-  QString str = QString::fromUtf8(rx_buffer.data());
+  QString str = QString::fromUtf8(rx_buffer.toHex());
+
+  for (int i = str.size() - 2; i > 0; i -= 2) {
+    str.insert(i, ' ');
+  }
   ui->te_receive->append(str);
+  if (widget_buf.size() != 0) {
+    qobject_cast<FunCodeWidgetBase *>(widget_buf.at(0))
+        ->parse_funcode(rx_buffer);
+    widget_buf.removeFirst();
+  }
   rx_buffer.clear();
 }
 
@@ -98,7 +109,11 @@ void MainWindow::onListWidgetMousePressEvent(QListWidgetItem *item) {
     qDebug() << "item is false  ";
     return;
   }
+  FunCodeWidgetBase *fun_code_widget =
+      fun_code_widgets.at(ui->lw_widget_list->row(item));
+  disconnect(fun_code_widget);
   delete ui->lw_widget_list->takeItem(ui->lw_widget_list->row(item));
+  fun_code_widgets.removeOne(fun_code_widget);
 }
 
 void MainWindow::create_fun_code_03_widget() {
@@ -109,9 +124,10 @@ void MainWindow::create_fun_code_03_widget() {
     QListWidgetItem *item = new QListWidgetItem(ui->lw_widget_list);
     item->setSizeHint(QSize(ui->lw_widget_list->width(), 110));
     ui->lw_widget_list->setItemWidget(item, fun_code_widget);
-    ui->lw_widget_list->setStyleSheet(
-        "QListWidget::item:hover { background-color: transparent; }"
-        "QListWidget::item:selected { border: 2px solid #007bff; }");
+
+    connect(fun_code_widget, &FunCodeWidget_03::send_require, this,
+            &MainWindow::data_send_to_serial);
+
   } catch (...) {
     // 捕获所有类型的异常
     QMessageBox::warning(this, "Warning", "Create widget failed!");
@@ -120,3 +136,27 @@ void MainWindow::create_fun_code_03_widget() {
 }
 void MainWindow::create_fun_code_06_widget() {}
 void MainWindow::create_fun_code_16_widget() {}
+
+void MainWindow::data_send_to_serial(QByteArray data) {
+  QWidget *sender_widget = qobject_cast<QWidget *>(sender());
+  if (sender_widget == nullptr) {
+    qDebug() << "sender_widget is nullptr";
+  }
+  if (widget_buf.size() != 0) {
+    qDebug() << "widget_data_map size:" << widget_buf.size();
+    return;
+  }
+  widget_buf.append(sender_widget);
+  QByteArray send_data;
+  send_data.append(ui->le_slave_address->text().toUShort());
+  send_data.append(data);
+  quint16 crc = ModbusCRC16(send_data);
+  send_data.append(crc & 0xFF);
+  send_data.append((crc >> 8) & 0xFF);
+  qDebug() << "send_data:" << send_data.toHex();
+  if (serialPort->isOpen()) {
+    serialPort->write(send_data);
+  } else {
+    qDebug() << "serialPort is not open";
+  }
+}

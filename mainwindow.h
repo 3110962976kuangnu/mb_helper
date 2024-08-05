@@ -9,9 +9,13 @@
 #include <QSerialPortInfo>
 #include <QThread>
 #include <QTimer>
-
+#include <qglobal.h>
+#include <qlist.h>
+#include <qmap.h>
+#include <qwidget.h>
 
 #include "funcode_widget.h"
+#include "modbus_crc.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -39,11 +43,14 @@ public slots:
 
   void onListWidgetMousePressEvent(QListWidgetItem *item);
 
+  void data_send_to_serial(QByteArray data);
+
 private:
   Ui::MainWindow *ui;
   QSerialPort *serialPort;
   QTimer *timer;
   QByteArray rx_buffer;
   QList<FunCodeWidgetBase *> fun_code_widgets;
+  QList<QWidget *> widget_buf;
 };
 #endif // MAINWINDOW_H

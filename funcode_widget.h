@@ -17,7 +17,10 @@
 #include <QStandardItemModel>
 #include <QTableView>
 #include <Qwidget>
+#include <qdebug.h>
+#include <qglobal.h>
 
+#include "modbus_crc.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -31,13 +34,16 @@ class FunCodeWidgetBase : public QWidget {
 public:
   QGridLayout *gridLayout;
 
-  FunCodeWidgetBase(QWidget *parent = nullptr) : QWidget(parent) {
+  explicit FunCodeWidgetBase(QWidget *parent = nullptr) : QWidget(parent) {
     gridLayout = new QGridLayout(this);
     gridLayout->setContentsMargins(0, 0, 0, 0);
     setLayout(gridLayout);
   }
   virtual ~FunCodeWidgetBase() { delete gridLayout; }
   virtual bool parse_funcode(QByteArray data) = 0;
+  virtual void send_data_to_main() = 0;
+signals:
+  void send_require(const QByteArray &data);
 };
 
 class FunCodeWidget_03 : public FunCodeWidgetBase {
@@ -109,9 +115,10 @@ public:
 
     this->setContentsMargins(5, 5, 5, 5);
 
-
     QByteArray data = QByteArray::fromHex("01 02 03 04");
     add_data_to_table(data);
+    connect(pb_read, &QPushButton::clicked, this,
+            &FunCodeWidget_03::send_data_to_main);
   }
   ~FunCodeWidget_03() {
     delete label_fncode;
@@ -126,6 +133,17 @@ public:
   }
   bool parse_funcode(QByteArray data) override {
     qDebug() << "FunCode 03";
+    qDebug() << "data:" << data.toHex();
+    QByteArray tt = QByteArray::fromHex("01 03 00 02 04 01 02 03 04");
+    quint16 crc = ModbusCRC16(tt);
+    tt.append((crc >> 8) & 0xff);
+    tt.append((crc >> 0) & 0xff);
+    bool crcok = ModbusCRC16(tt);
+    if (crcok) {
+      qDebug() << "CRC ok";
+      qDebug() << "reg len=" << (int)(tt.at(2) << 8) + tt.at(3);
+      qDebug() << "byte len=" << (int)tt.at(4);
+    }
     return true;
   }
 
@@ -137,6 +155,18 @@ public:
       model_data->setItem(0, i, item1);
       model_data->setItem(1, i, item2);
     };
+  }
+  void send_data_to_main() override {
+    qDebug() << "FunCode 03 send data to main";
+    QByteArray data;
+    uint16_t reg_address = le_reg_edit->text().toUInt();
+    uint16_t reg_len = le_data_or_len->text().toUInt();
+    data.append(0x03);
+    data.append((reg_address >> 8) & 0xff);
+    data.append((reg_address >> 0) & 0xff);
+    data.append((reg_len >> 8) & 0xff);
+    data.append((reg_len >> 0) & 0xff);
+    emit send_require(data);
   }
 };
 
