@@ -5,17 +5,21 @@
 #include <QListWidgetItem>
 #include <QMainWindow>
 #include <QMessageBox>
+#include <QQueue>
 #include <QSerialPort>
 #include <QSerialPortInfo>
 #include <QThread>
 #include <QTimer>
-#include <qglobal.h>
-#include <qlist.h>
-#include <qmap.h>
-#include <qwidget.h>
+
 
 #include "funcode_widget.h"
 #include "modbus_crc.h"
+
+struct one_task {
+  QWidget *sender;
+  QByteArray data;
+  bool iswaiting;
+};
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -44,13 +48,16 @@ public slots:
   void onListWidgetMousePressEvent(QListWidgetItem *item);
 
   void data_send_to_serial(QByteArray data);
+  void package_timer_out();
 
 private:
   Ui::MainWindow *ui;
   QSerialPort *serialPort;
   QTimer *timer;
+  QTimer *package_no_response_timer;
   QByteArray rx_buffer;
   QList<FunCodeWidgetBase *> fun_code_widgets;
-  QList<QWidget *> widget_buf;
+  // QList<QWidget *> widget_buf;
+  QQueue<one_task> *task_queue;
 };
 #endif // MAINWINDOW_H

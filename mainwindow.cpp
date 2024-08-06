@@ -1,19 +1,18 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
-#include <qglobal.h>
-#include <qlistwidget.h>
-#include <qmessagebox.h>
-#include <qpushbutton.h>
-#include <qvariant.h>
-#include <qwidget.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
+  ui->le_slave_address->setText("1");
+  task_queue = new QQueue<one_task>();
   serialPort = new QSerialPort(this);
   timer = new QTimer(this);
   timer->setSingleShot(true);
   timer->setInterval(10);
+  package_no_response_timer = new QTimer(this);
+  package_no_response_timer->setSingleShot(true);
+  package_no_response_timer->setInterval(1000);
   rx_buffer.clear();
   ui->cbx_baud->addItems({"9600", "19200", "38400", "57600", "115200"});
   get_serial_and_update_ui();
@@ -28,6 +27,8 @@ MainWindow::MainWindow(QWidget *parent)
   connect(ui->btn_clear, &QPushButton::clicked, ui->te_receive,
           &QTextEdit::clear);
   connect(timer, &QTimer::timeout, this, &MainWindow::parse_serial_data);
+  connect(package_no_response_timer, &QTimer::timeout, this,
+          &MainWindow::package_timer_out);
   connect(ui->btn_add_03, &QPushButton::clicked, this,
           &MainWindow::create_fun_code_03_widget);
   connect(ui->lw_widget_list, &QListWidget::itemPressed, this,
@@ -94,10 +95,30 @@ void MainWindow::parse_serial_data() {
     str.insert(i, ' ');
   }
   ui->te_receive->append(str);
-  if (widget_buf.size() != 0) {
-    qobject_cast<FunCodeWidgetBase *>(widget_buf.at(0))
-        ->parse_funcode(rx_buffer);
-    widget_buf.removeFirst();
+
+  if (!task_queue->isEmpty()) {
+    one_task &task = task_queue->head();
+    // package_no_response_timer->stop();
+    qobject_cast<FunCodeWidgetBase *>(task.sender)->parse_funcode(rx_buffer);
+    task_queue->dequeue();
+    if (!task_queue->isEmpty()) {
+      one_task &task1 = task_queue->head();
+      QByteArray send_data;
+      send_data.append(ui->le_slave_address->text().toUShort());
+      send_data.append(task1.data);
+      quint16 crc = ModbusCRC16(send_data);
+      send_data.append(crc & 0xFF);
+      send_data.append((crc >> 8) & 0xFF);
+      qDebug() << "send_data:" << send_data.toHex();
+      if (serialPort->isOpen()) {
+        task1.iswaiting = true;
+        serialPort->write(send_data);
+        package_no_response_timer->setInterval(ui->le_interval->text().toInt());
+        package_no_response_timer->start();
+      } else {
+        qDebug() << "serialPort is not open";
+      }
+    }
   }
   rx_buffer.clear();
 }
@@ -122,7 +143,7 @@ void MainWindow::create_fun_code_03_widget() {
     FunCodeWidget_03 *fun_code_widget = new FunCodeWidget_03(this);
     fun_code_widgets.append(fun_code_widget);
     QListWidgetItem *item = new QListWidgetItem(ui->lw_widget_list);
-    item->setSizeHint(QSize(ui->lw_widget_list->width(), 110));
+    item->setSizeHint(QSize(ui->lw_widget_list->width(), 120));
     ui->lw_widget_list->setItemWidget(item, fun_code_widget);
 
     connect(fun_code_widget, &FunCodeWidget_03::send_require, this,
@@ -141,12 +162,14 @@ void MainWindow::data_send_to_serial(QByteArray data) {
   QWidget *sender_widget = qobject_cast<QWidget *>(sender());
   if (sender_widget == nullptr) {
     qDebug() << "sender_widget is nullptr";
-  }
-  if (widget_buf.size() != 0) {
-    qDebug() << "widget_data_map size:" << widget_buf.size();
     return;
   }
-  widget_buf.append(sender_widget);
+  one_task new_task = {sender_widget, data, false};
+  task_queue->enqueue(new_task);
+  const one_task &task = task_queue->head();
+  if (task.iswaiting) {
+    return;
+  }
   QByteArray send_data;
   send_data.append(ui->le_slave_address->text().toUShort());
   send_data.append(data);
@@ -155,8 +178,15 @@ void MainWindow::data_send_to_serial(QByteArray data) {
   send_data.append((crc >> 8) & 0xFF);
   qDebug() << "send_data:" << send_data.toHex();
   if (serialPort->isOpen()) {
+    one_task &task1 = task_queue->head();
+    task1.iswaiting = true;
     serialPort->write(send_data);
+    package_no_response_timer->setInterval(ui->le_interval->text().toInt());
+    package_no_response_timer->start();
+    qDebug() << "package_no_response_timer start";
   } else {
     qDebug() << "serialPort is not open";
   }
 }
+
+void MainWindow::package_timer_out() { qDebug() << "package_timer_out"; }
