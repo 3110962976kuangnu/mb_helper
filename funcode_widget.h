@@ -17,8 +17,7 @@
 #include <QStandardItemModel>
 #include <QTableView>
 #include <Qwidget>
-#include <qchar.h>
-#include <qglobal.h>
+
 
 #include "modbus_crc.h"
 
@@ -136,16 +135,6 @@ public:
   bool parse_funcode(QByteArray data) override {
     qDebug() << "FunCode 03";
     qDebug() << "data:" << data.toHex();
-    // QByteArray tt = QByteArray::fromHex("01 03 00 0a 14 "
-    //                                     "01 02 03 04 "
-    //                                     "01 02 03 04 "
-    //                                     "01 02 03 04 "
-    //                                     "01 02 03 04 "
-    //                                     "01 02 03 04 ");
-    // // data = tt;
-    // quint16 crc = ModbusCRC16(tt);
-    // tt.append((crc >> 8) & 0xff);
-    // tt.append((crc >> 0) & 0xff);
     bool crcok = ModbusCRC16(data);
     if (true) {
       qDebug() << "CRC ok";
@@ -197,4 +186,22 @@ public:
   }
 };
 
+class FunCodeWidget_06 : public FunCodeWidgetBase {
+  Q_OBJECT
+  QLabel *label_funcode;
+  QLabel *label_reg_address;
+  QLabel *label_reg_value;
+  QLineEdit *le_reg_address;
+  QLineEdit *le_reg_value;
+  QPushButton *pb_write;
+
+public:
+  FunCodeWidget_06(QWidget *parent = nullptr);
+
+  ~FunCodeWidget_06();
+
+  bool parse_funcode(QByteArray data) override;
+
+  void send_data_to_main() override;
+};
 #endif // FUNCODE_WIDGET_H

@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "funcode_widget.h"
 #include <qdebug.h>
 #include <qglobal.h>
 
@@ -33,6 +34,8 @@ MainWindow::MainWindow(QWidget *parent)
           &MainWindow::package_timer_out);
   connect(ui->btn_add_03, &QPushButton::clicked, this,
           &MainWindow::create_fun_code_03_widget);
+  connect(ui->btn_add_06, &QPushButton::clicked, this,
+          &MainWindow::create_fun_code_06_widget);
   connect(ui->lw_widget_list, &QListWidget::itemPressed, this,
           &MainWindow::onListWidgetMousePressEvent, Qt::QueuedConnection);
 }
@@ -103,13 +106,13 @@ void MainWindow::parse_serial_data() {
     one_task &task = task_queue->head();
     qDebug() << "task.data:" << task.data.toHex();
     qDebug() << "rx_buffer:" << rx_buffer.toHex();
-    if (rx_buffer.contains(task.data)) {
-      qDebug() << "rx_buffer match task.data";
-      package_no_response_timer->start();
-      rx_buffer.clear();
-      return;
-    }
-    // package_no_response_timer->stop();
+    // if (rx_buffer.contains(task.data)) {
+    //   qDebug() << "rx_buffer match task.data";
+    //   package_no_response_timer->start();
+    //   rx_buffer.clear();
+    //   return;
+    // }
+    package_no_response_timer->stop();
     qobject_cast<FunCodeWidgetBase *>(task.sender)->parse_funcode(rx_buffer);
     task_queue->dequeue();
     if (!task_queue->isEmpty()) {
@@ -130,6 +133,8 @@ void MainWindow::parse_serial_data() {
         qDebug() << "serialPort is not open";
       }
     }
+  } else {
+    qDebug() << "task_queue is  empty";
   }
   rx_buffer.clear();
 }
@@ -166,7 +171,17 @@ void MainWindow::create_fun_code_03_widget() {
     throw; // 重新抛出异常
   }
 }
-void MainWindow::create_fun_code_06_widget() {}
+void MainWindow::create_fun_code_06_widget() {
+  qDebug() << "create_fun_code_06_widget";
+  FunCodeWidget_06 *funcode_widget = new FunCodeWidget_06(this);
+  fun_code_widgets.append(funcode_widget);
+  QListWidgetItem *item = new QListWidgetItem(ui->lw_widget_list);
+  item->setSizeHint(QSize(ui->lw_widget_list->width(), 120));
+  ui->lw_widget_list->setItemWidget(item, funcode_widget);
+
+  connect(funcode_widget, &FunCodeWidget_06::send_require, this,
+          &MainWindow::data_send_to_serial);
+}
 void MainWindow::create_fun_code_16_widget() {}
 
 void MainWindow::data_send_to_serial(QByteArray data) {
@@ -179,6 +194,7 @@ void MainWindow::data_send_to_serial(QByteArray data) {
   task_queue->enqueue(new_task);
   const one_task &task = task_queue->head();
   if (task.iswaiting) {
+    qDebug() << "task is waiting";
     return;
   }
   QByteArray send_data;

@@ -35,6 +35,7 @@ add_executable(modbus_helper
   mainwindow.ui
   funcode_widget.h
   modbus_crc.cpp
+  fun_code_widget_06.cpp
 )
 
 
