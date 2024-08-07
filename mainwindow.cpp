@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include <qdebug.h>
+#include <qglobal.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -97,7 +99,16 @@ void MainWindow::parse_serial_data() {
   ui->te_receive->append(str);
 
   if (!task_queue->isEmpty()) {
+    qDebug() << "task_queue is not empty";
     one_task &task = task_queue->head();
+    qDebug() << "task.data:" << task.data.toHex();
+    qDebug() << "rx_buffer:" << rx_buffer.toHex();
+    if (rx_buffer.contains(task.data)) {
+      qDebug() << "rx_buffer match task.data";
+      package_no_response_timer->start();
+      rx_buffer.clear();
+      return;
+    }
     // package_no_response_timer->stop();
     qobject_cast<FunCodeWidgetBase *>(task.sender)->parse_funcode(rx_buffer);
     task_queue->dequeue();

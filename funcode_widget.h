@@ -17,7 +17,8 @@
 #include <QStandardItemModel>
 #include <QTableView>
 #include <Qwidget>
-
+#include <qchar.h>
+#include <qglobal.h>
 
 #include "modbus_crc.h"
 
@@ -135,22 +136,22 @@ public:
   bool parse_funcode(QByteArray data) override {
     qDebug() << "FunCode 03";
     qDebug() << "data:" << data.toHex();
-    QByteArray tt = QByteArray::fromHex("01 03 00 0a 14 "
-                                        "01 02 03 04 "
-                                        "01 02 03 04 "
-                                        "01 02 03 04 "
-                                        "01 02 03 04 "
-                                        "01 02 03 04 ");
-    data = tt;
-    quint16 crc = ModbusCRC16(tt);
-    tt.append((crc >> 8) & 0xff);
-    tt.append((crc >> 0) & 0xff);
-    bool crcok = ModbusCRC16(tt);
-    if (crcok) {
+    // QByteArray tt = QByteArray::fromHex("01 03 00 0a 14 "
+    //                                     "01 02 03 04 "
+    //                                     "01 02 03 04 "
+    //                                     "01 02 03 04 "
+    //                                     "01 02 03 04 "
+    //                                     "01 02 03 04 ");
+    // // data = tt;
+    // quint16 crc = ModbusCRC16(tt);
+    // tt.append((crc >> 8) & 0xff);
+    // tt.append((crc >> 0) & 0xff);
+    bool crcok = ModbusCRC16(data);
+    if (true) {
       qDebug() << "CRC ok";
-      qDebug() << "reg len=" << (int)(tt.at(2) << 8) + tt.at(3);
-      qDebug() << "byte len=" << (int)tt.at(4);
-      qint16 reg_len = (int)(data.at(2) << 8) + data.at(3);
+      qDebug() << "byte len=" << QString::number(data.at(2));
+      qDebug() << "reg len=" << QString::number(data.at(2) / 2);
+      qint16 reg_len = data.at(2) / 2;
       qint16 reg_address = this->le_reg_edit->text().toUInt();
       model_data->clear();
       QStandardItem *_r = new QStandardItem(QString("地址(hex)"));
@@ -159,17 +160,12 @@ public:
       model_data->setItem(1, 0, _v);
       table_data->setColumnWidth(0, 100);
       for (qint16 i; i < reg_len; i++) {
-        qint16 _now_reg_add = reg_address + i;
-        qint16 _now_reg_value = (data.at(i * 2 + 5) << 8) | data.at(i * 2 + 6);
-        QStandardItem *r =
-            new QStandardItem(QString("%1")
-                                  .arg(_now_reg_add, 4, 16, QLatin1Char('0'))
-                                  .toUpper());
+        quint16 _now_reg_add = reg_address + i;
+        quint16 _now_reg_value = (data.at(i * 2 + 3) << 8) | data.at(i * 2 + 4);
+        QStandardItem *r = new QStandardItem(QString("%1").arg(_now_reg_add));
 
-        QStandardItem *v =
-            new QStandardItem(QString("%1")
-                                  .arg(_now_reg_value, 4, 16, QLatin1Char('0'))
-                                  .toUpper());
+        QStandardItem *v = new QStandardItem(
+            QString("0x%1").arg(_now_reg_value, 4, 16, QChar('0')));
         table_data->setColumnWidth(i, 50);
         model_data->setItem(0, i + 1, r);
         model_data->setItem(1, i + 1, v);
