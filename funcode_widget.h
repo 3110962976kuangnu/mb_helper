@@ -17,7 +17,7 @@
 #include <QStandardItemModel>
 #include <QTableView>
 #include <Qwidget>
-
+#include <qpushbutton.h>
 
 #include "modbus_crc.h"
 
@@ -204,4 +204,28 @@ public:
 
   void send_data_to_main() override;
 };
+
+class FunCodeWidget_10 : public FunCodeWidgetBase {
+  Q_OBJECT
+  QLabel *label_funcode;
+  QLabel *label_reg_address;
+  QLabel *label_reg_number;
+  QLineEdit *le_reg_address;
+  QLineEdit *le_reg_number;
+  QPushButton *pb_make_request;
+  QPushButton *pb_write;
+  QTableView *table_data;
+  QStandardItemModel *model_data;
+
+public:
+  FunCodeWidget_10(QWidget *parent = nullptr);
+
+  ~FunCodeWidget_10();
+
+  bool parse_funcode(QByteArray data) override;
+
+  void send_data_to_main() override;
+  void make_request_data_table();
+};
+
 #endif // FUNCODE_WIDGET_H

@@ -11,7 +11,6 @@
 #include <QThread>
 #include <QTimer>
 
-
 #include "funcode_widget.h"
 #include "modbus_crc.h"
 
@@ -43,7 +42,7 @@ public slots:
 
   void create_fun_code_03_widget();
   void create_fun_code_06_widget();
-  void create_fun_code_16_widget();
+  void create_fun_code_10_widget();
 
   void onListWidgetMousePressEvent(QListWidgetItem *item);
 

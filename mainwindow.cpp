@@ -3,6 +3,7 @@
 #include "funcode_widget.h"
 #include <qdebug.h>
 #include <qglobal.h>
+#include <qpushbutton.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -36,6 +37,8 @@ MainWindow::MainWindow(QWidget *parent)
           &MainWindow::create_fun_code_03_widget);
   connect(ui->btn_add_06, &QPushButton::clicked, this,
           &MainWindow::create_fun_code_06_widget);
+  connect(ui->btn_add_10, &QPushButton::clicked, this,
+          &MainWindow::create_fun_code_10_widget);
   connect(ui->lw_widget_list, &QListWidget::itemPressed, this,
           &MainWindow::onListWidgetMousePressEvent, Qt::QueuedConnection);
 }
@@ -182,7 +185,18 @@ void MainWindow::create_fun_code_06_widget() {
   connect(funcode_widget, &FunCodeWidget_06::send_require, this,
           &MainWindow::data_send_to_serial);
 }
-void MainWindow::create_fun_code_16_widget() {}
+void MainWindow::create_fun_code_10_widget() {
+  qDebug() << "create_fun_code_10_widget";
+
+  FunCodeWidget_10 *funcode_widget = new FunCodeWidget_10(this);
+  fun_code_widgets.append(funcode_widget);
+  QListWidgetItem *item = new QListWidgetItem(ui->lw_widget_list);
+  item->setSizeHint(QSize(ui->lw_widget_list->width(), 120));
+  ui->lw_widget_list->setItemWidget(item, funcode_widget);
+
+  connect(funcode_widget, &FunCodeWidget_10::send_require, this,
+          &MainWindow::data_send_to_serial);
+}
 
 void MainWindow::data_send_to_serial(QByteArray data) {
   QWidget *sender_widget = qobject_cast<QWidget *>(sender());
